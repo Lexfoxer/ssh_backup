@@ -9,16 +9,35 @@ fsExtra = require 'fs-extra'
 servers = require './_DB.js'
 preloader = require './preloader.js'
 
+
 # 
 # Global
 # 
-dirDownload = './backup/'
+d = new Date()
+DATE = d.getDate()+'.'+(d.getMonth()+1)+'.'+d.getUTCFullYear();
+dirDownload = './backup.'+DATE+'/'
+
+
+# 
+# Class Timer
+# 
+class Timer
+	@time: ''
+	constructor: (title)->
+		@title = title
+		@start()
+	start: ()->
+		@start_time = new Date().getTime()
+	end: ()->
+		@end_time = new Date().getTime()
+		@time = " (#{@title}: #{(@end_time - @start_time) / 1000}s)"
 
 
 # Create Dir
 fsExtra.emptyDir dirDownload, (err)->
 	if err
 		console.error err
+
 
 # Create queue
 aSync = tress (server, done)->
@@ -27,15 +46,21 @@ aSync = tress (server, done)->
 			done err
 		else
 			done null, data
-, 2
+, 1
 
-# for k, v of servers
-# 	aSync.push v
+# 
+# Push to queue
+# 
+for k, v of servers
+	aSync.push v
 
-aSync.push servers['visible.name']
 
-
+# 
+# Function Create Zip & Download this
+# 
 createZip = (server, callback)->
+	backup_time = new Timer 'time'
+
 	console.log "\n⡇Run backup " + server.user
 	serv = new SSH {
 			host: server.host
@@ -54,7 +79,8 @@ createZip = (server, callback)->
 		exit: (code, stdout, stderr)->
 			process.stdout.clearLine()
 			process.stdout.cursorTo(0)
-			console.log 'ZIP successful created ' + server.path
+			backup_time.end()
+			console.log '⡇ZIP successful created ' + server.path + backup_time.time
 			if code != 0
 				callback code
 			else
@@ -69,7 +95,11 @@ createZip = (server, callback)->
 						preloader.stop()
 						if err
 							console.log err
-						console.log '\nDownload successful: ' + server.path 
+						backup_time.end()
+						process.stdout.clearLine()
+						process.stdout.cursorTo(0)
+						console.log '⡇Download successful: ' + server.path + backup_time.time
+						callback null, true
 	}
 	.start()
 
