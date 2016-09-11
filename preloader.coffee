@@ -16,6 +16,13 @@ class Preloader
 	edit_text: (text)->
 		@text = text
 
+	remove: (in_text = '')->
+		@stop()
+		process.stdout.clearLine()
+		process.stdout.cursorTo(0)
+		if in_text != ''
+			console.log in_text
+
 	start: (text = '')->
 		if @runs == false
 			if text != ''
